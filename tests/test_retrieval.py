@@ -1,11 +1,12 @@
-"""Retrieval: vector, BM25, RRF fusion, and hybrid search on the fixture docs."""
+"""Retrieval: vector, BM25, RRF fusion, reranking, and hybrid search on the fixture docs."""
 
 import pytest
 
 import config.settings as settings
 from retrieval.bm25_search import bm25_search
-from retrieval.hybrid_search import hybrid_search
+from retrieval.hybrid_search import hybrid_search, hybrid_search_in
 from retrieval.models import RetrievedChunk
+from retrieval.reranker import rerank
 from retrieval.rrf import fuse_rankings
 from retrieval.vector_search import vector_search
 from vectorstore.chroma_client import get_collection
@@ -66,3 +67,29 @@ def test_rrf_rewards_chunks_found_by_both_searches() -> None:
 
 def test_rrf_of_nothing_is_empty() -> None:
     assert fuse_rankings([[], []]) == []
+
+
+def _doc_chunk(chunk_id: str, section: str, text: str) -> RetrievedChunk:
+    metadata = {"doc_title": "Doc", "section_title": section, "subsection": ""}
+    return RetrievedChunk(chunk_id=chunk_id, text=text, metadata=metadata, score=0.0)
+
+
+def test_reranker_moves_the_answering_chunk_to_the_top() -> None:
+    candidates = [
+        _doc_chunk("intro", "Usage", "nvm has many commands for working with node versions."),
+        _doc_chunk("colors", "Colors", "Use nvm set-colors to change the colours of nvm output."),
+        _doc_chunk("default", "Default version", "Run `nvm alias default 18` so every new shell uses node 18."),
+    ]
+    results = rerank("How do I make every new shell use the same node version?", candidates, top_k=2)
+    assert [c.chunk_id for c in results][0] == "default"
+    assert len(results) == 2
+    assert results[0].score >= results[1].score
+
+
+def test_reranker_of_nothing_is_empty() -> None:
+    assert rerank("anything", [], top_k=5) == []
+
+
+def test_hybrid_without_reranker_returns_rrf_scores(ingested: None) -> None:
+    results = hybrid_search_in(get_collection(), "installation", use_reranker=False)
+    assert all(0 < c.score <= 2 / (settings.RRF_K + 1) for c in results)

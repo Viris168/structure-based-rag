@@ -10,14 +10,16 @@ from retrieval.vector_search import vector_search
 
 
 def run_comparison() -> str:
-    """Score five setups on the same questions, from the original design to the full system.
+    """Score seven setups on the same questions, from the original design to the full system.
 
-    Setups:
+    Setups (no merging and no reranker unless stated):
         1. H2 only, no heading path, hybrid      (board design without fixes)
         2. H2 + H3, no heading path, hybrid      (adds the H3 rule)
         3. H2 + H3, heading path, vector only
         4. H2 + H3, heading path, BM25 only
-        5. H2 + H3, heading path, hybrid         (the current system)
+        5. H2 + H3, heading path, hybrid         (adds the heading path)
+        6. as 5, plus small-chunk merging
+        7. as 6, plus the reranker               (the current system)
 
     Each index is built in memory from DOCS_DIR, so docs need not be ingested
     first and the real collection is never changed.
@@ -26,16 +28,19 @@ def run_comparison() -> str:
         A table of hit rate and MRR per setup.
     """
     questions = load_questions(EVAL_QUESTIONS_PATH)
-    h2_only = build_memory_index(split_on_h3=False, include_heading_path=False)
-    h3_no_path = build_memory_index(split_on_h3=True, include_heading_path=False)
-    full = build_memory_index(split_on_h3=True, include_heading_path=True)
+    h2_only = build_memory_index(split_on_h3=False, include_heading_path=False, merge_small=False)
+    h3_no_path = build_memory_index(split_on_h3=True, include_heading_path=False, merge_small=False)
+    with_path = build_memory_index(split_on_h3=True, include_heading_path=True, merge_small=False)
+    merged = build_memory_index(split_on_h3=True, include_heading_path=True, merge_small=True)
 
     setups: list[tuple[str, SearchFunction]] = [
-        ("H2 only · no path · hybrid", lambda q: hybrid_search_in(h2_only, q, include_heading_path=False)),
-        ("H2+H3   · no path · hybrid", lambda q: hybrid_search_in(h3_no_path, q, include_heading_path=False)),
-        ("H2+H3   · path    · vector", lambda q: vector_search(full, q, TOP_K)),
-        ("H2+H3   · path    · BM25", lambda q: bm25_search(full, q, TOP_K)),
-        ("H2+H3   · path    · hybrid  (current)", lambda q: hybrid_search_in(full, q)),
+        ("H2 only · no path · hybrid", lambda q: hybrid_search_in(h2_only, q, False, use_reranker=False)),
+        ("H2+H3 · no path · hybrid", lambda q: hybrid_search_in(h3_no_path, q, False, use_reranker=False)),
+        ("H2+H3 · path · vector", lambda q: vector_search(with_path, q, TOP_K)),
+        ("H2+H3 · path · BM25", lambda q: bm25_search(with_path, q, TOP_K)),
+        ("H2+H3 · path · hybrid", lambda q: hybrid_search_in(with_path, q, use_reranker=False)),
+        ("  + merge small chunks", lambda q: hybrid_search_in(merged, q, use_reranker=False)),
+        ("  + merge + reranker  (current)", lambda q: hybrid_search_in(merged, q)),
     ]
     lines = [
         f"{len(questions)} questions, top {TOP_K}",

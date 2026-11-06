@@ -5,7 +5,7 @@ import re
 from chromadb.api.models.Collection import Collection
 from rank_bm25 import BM25Okapi
 
-from chunking.context_header import build_heading_path
+from chunking.context_header import build_stored_chunk_text
 from chunking.metadata import Metadata
 from retrieval.models import RetrievedChunk
 
@@ -37,25 +37,6 @@ def _tokenize(text: str) -> list[str]:
     return tokens
 
 
-def _searchable_text(text: str, metadata: Metadata, include_heading_path: bool) -> str:
-    """Return the chunk text with its heading path in front, matching what was embedded.
-
-    Args:
-        text: Raw chunk text.
-        metadata: The chunk's stored metadata.
-        include_heading_path: False searches the raw chunk text alone.
-
-    Returns:
-        Heading path, blank line, chunk text (or just the chunk text).
-    """
-    if not include_heading_path:
-        return text
-    heading_path = build_heading_path(
-        str(metadata["doc_title"]), str(metadata["section_title"]), str(metadata["subsection"])
-    )
-    return f"{heading_path}\n\n{text}"
-
-
 def _get_index(
     collection_name: str,
     ids: list[str],
@@ -78,7 +59,7 @@ def _get_index(
     key = (collection_name, include_heading_path)
     cached = _index_cache.get(key)
     if cached is None or cached[0] != ids:
-        corpus = [_tokenize(_searchable_text(t, m, include_heading_path)) for t, m in zip(texts, metadatas)]
+        corpus = [_tokenize(build_stored_chunk_text(t, m, include_heading_path)) for t, m in zip(texts, metadatas)]
         cached = (ids, BM25Okapi(corpus))
         _index_cache[key] = cached
     return cached[1]

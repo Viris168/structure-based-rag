@@ -17,7 +17,10 @@ Split on ## headings                        Hybrid search
    ▼  → split on ### headings                 merged with Reciprocal Rank Fusion
 Fit to model limit                             │
    │  still > 512 tokens?                      ▼
-   ▼  → split at paragraphs                 Top 5 chunks
+   ▼  → split at paragraphs                 Rerank the top 20 (cross-encoder)
+Merge tiny chunks                              │
+   │  < 40 tokens → same-section neighbour     ▼
+   ▼                                        Top 5 chunks
 Prepend heading path                           │
    │  "Doc > Section > Subsection"             ▼
    ▼                                        LangGraph: retrieve → build_prompt → generate
@@ -33,7 +36,8 @@ ChromaDB (persistent, chroma_data/)         [Source: doc · Section: heading]
 1. Split each document on `##` headings. Text before the first `##` becomes its own chunk, using the document title as its section.
 2. If a section is over **400 words**, split it on its `###` headings. Text between the `##` and the first `###` is kept as an "intro" chunk.
 3. If a piece is still too long for the embedding model (512 tokens, counting its heading path), split it at paragraph boundaries. Code blocks and tables stay whole unless one of them is longer than the limit by itself; then it is split at line breaks.
-4. Headings inside code blocks (for example a `## comment` in a shell snippet) are ignored.
+4. A chunk under **40 tokens** is merged into the chunk before it (or after it) in the same `##` section, and the subsection labels are joined, e.g. `Usage > Setting Custom Colors / Restoring PATH`. A tiny section with no same-section neighbour (a one-line `## License`) is kept as it is, since merging it into another section would give it the wrong citation.
+5. Headings inside code blocks (for example a `## comment` in a shell snippet) are ignored.
 
 ### What is stored for each chunk
 
@@ -46,6 +50,7 @@ ChromaDB (persistent, chroma_data/)         [Source: doc · Section: heading]
 ### Design choices
 
 - **Hybrid search.** Vector search finds paraphrases ("how do I set it up?"); BM25 finds exact names (`get_or_create_collection`, `MCP_AUTH_TOKEN`, error codes). Reciprocal Rank Fusion combines them using ranks, since their scores are on different scales.
+- **Reranker.** Vector search compares two vectors made separately, so it judges "same topic", not "answers the question"; a general "Usage" intro often outranks the subsection that actually answers. A cross-encoder (`cross-encoder/ms-marco-MiniLM-L-6-v2`, 90 MB) reads the question and each chunk together and re-scores the top 20 fused results. It is too slow to run on every chunk, which is why it only re-scores candidates.
 - **bge-small instead of all-MiniLM-L6-v2.** MiniLM reads only 256 tokens (about 190 words), so the second half of a 400-word chunk would never be embedded. bge-small reads 512.
 - **Heading path in the embedding.** A chunk like "Run `pip install`…" means little on its own; "MCP Documentation > Installation" in front of it tells the model what it is about.
 - **Incremental ingestion.** Each document's hash is stored. Unchanged documents are skipped; changed documents have all their chunks replaced, so no stale chunks remain; deleted documents are removed.
@@ -77,7 +82,7 @@ The embedding model downloads automatically on first use.
 | `python main.py search "<query>"` | Show the top 5 search results, without calling the LLM |
 | `python main.py ask "<question>"` | Answer a question with citations |
 | `python main.py eval` | Score search against `eval/questions.json` |
-| `python main.py compare` | Compare five search setups on the same questions |
+| `python main.py compare` | Compare seven search setups on the same questions |
 
 Example:
 
@@ -119,7 +124,9 @@ The evaluation measures whether search finds the right section, not whether the 
    | H2 + H3 · no heading path · hybrid | What the 400-word H3 rule adds |
    | H2 + H3 · heading path · vector only | Vector search on its own |
    | H2 + H3 · heading path · BM25 only | Keyword search on its own |
-   | H2 + H3 · heading path · hybrid | The current system |
+   | H2 + H3 · heading path · hybrid | What the heading path adds |
+   | + merge small chunks | What merging tiny chunks adds |
+   | + merge + reranker | The current system |
 
 ## Tests
 
@@ -140,6 +147,7 @@ chunking/
   markdown_syntax.py        fence, heading, and empty-text helpers
   paragraph_splitter.py     split oversized text at paragraph boundaries
   hybrid_chunker.py         apply the H2 / H3 / token-limit rules
+  chunk_merger.py           merge tiny chunks into a same-section neighbour
   text_size.py              word and model-token counts
   context_header.py         heading path and embedding text
   metadata.py               metadata stored with each chunk
@@ -153,7 +161,8 @@ retrieval/
   vector_search.py          similarity search
   bm25_search.py            keyword search
   rrf.py                    Reciprocal Rank Fusion
-  hybrid_search.py          vector + BM25 → top-k
+  reranker.py               cross-encoder re-scoring of the candidates
+  hybrid_search.py          vector + BM25 → fuse → rerank → top-k
   models.py                 RetrievedChunk
 generation/
   prompt_builder.py         grounded prompt with labelled excerpts
@@ -171,7 +180,7 @@ eval/
   matching.py               is this result the expected section?
   hit_rate.py               hit rate, MRR, and the eval report
   index_builder.py          in-memory indexes with features on or off
-  compare.py                the five-setup comparison
+  compare.py                the seven-setup comparison
 demo/                       one thin script per command
 tests/                      pytest suite and fixtures
 main.py                     command-line entry point
@@ -189,6 +198,9 @@ All settings are in `config/settings.py`. The ones you are most likely to change
 | `TOP_K` | 5 | Chunks given to the LLM |
 | `SEARCH_CANDIDATES` | 20 | Results each search contributes before fusion |
 | `RRF_K` | 60 | Fusion constant |
+| `RERANKER_MODEL` | `cross-encoder/ms-marco-MiniLM-L-6-v2` | Cross-encoder that re-scores candidates |
+| `RERANK_CANDIDATES` | 20 | Fused results the reranker re-scores |
+| `MIN_CHUNK_TOKENS` | 40 | Chunks smaller than this merge into a same-section neighbour |
 | `LLM_MODEL` | `deepseek-chat` | Model used for answers |
 | `EVAL_HIT_TARGET` | 0.85 | Hit rate `eval` must reach to pass |
 

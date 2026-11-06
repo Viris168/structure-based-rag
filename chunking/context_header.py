@@ -1,5 +1,6 @@
 """Builds the heading path that is prepended to a chunk before embedding."""
 
+from chunking.metadata import Metadata
 from chunking.models import Chunk
 from config.settings import HEADING_PATH_SEPARATOR
 
@@ -42,3 +43,25 @@ def build_embedding_text(chunk: Chunk, include_heading_path: bool = True) -> str
         return chunk.text
     heading_path = build_heading_path(chunk.doc_title, chunk.section_title, chunk.subsection)
     return f"{heading_path}\n\n{chunk.text}"
+
+
+def build_stored_chunk_text(text: str, metadata: Metadata, include_heading_path: bool = True) -> str:
+    """Rebuild a stored chunk's embedded form from its raw text and metadata.
+
+    Search results carry the raw text and metadata, not a Chunk; BM25 and the
+    reranker use this so they see the same text the embedding model saw.
+
+    Args:
+        text: Raw chunk text as stored in ChromaDB.
+        metadata: The chunk's stored metadata.
+        include_heading_path: False returns the raw text alone.
+
+    Returns:
+        Heading path, blank line, chunk text (or just the chunk text).
+    """
+    if not include_heading_path:
+        return text
+    heading_path = build_heading_path(
+        str(metadata["doc_title"]), str(metadata["section_title"]), str(metadata["subsection"])
+    )
+    return f"{heading_path}\n\n{text}"

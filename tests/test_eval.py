@@ -92,5 +92,5 @@ def test_comparison_scores_all_setups_without_touching_real_store(ingested: None
     count_before = get_collection().count()
     lines = run_comparison().splitlines()
     rows = [line for line in lines if "%" in line]
-    assert len(rows) == 5 and "(current)" in rows[-1]
+    assert len(rows) == 7 and "(current)" in rows[-1]
     assert get_collection().count() == count_before

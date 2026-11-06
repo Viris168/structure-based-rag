@@ -2,6 +2,7 @@
 
 import logging
 
+from chunking.chunk_merger import merge_small_chunks
 from chunking.context_header import build_heading_path
 from chunking.header_splitter import split_on_heading
 from chunking.markdown_syntax import has_content
@@ -53,17 +54,20 @@ def _fit_to_model(text: str, budget: int) -> list[str]:
     return pack_paragraphs(text, budget)
 
 
-def chunk_document(document: SourceDocument, split_on_h3: bool = True) -> list[Chunk]:
+def chunk_document(document: SourceDocument, split_on_h3: bool = True, merge_small: bool = True) -> list[Chunk]:
     """Chunk one document using structure-based rules.
 
     Steps: split on `##` → split sections over 400 words on `###` →
     split anything that, with its heading path, would exceed the model's
-    token limit at paragraph boundaries.
+    token limit at paragraph boundaries → merge chunks under
+    MIN_CHUNK_TOKENS into a same-section neighbour.
 
     Args:
         document: The loaded Markdown file.
         split_on_h3: False skips the H3 rule; the evaluation uses this to
             measure what the rule adds.
+        merge_small: False keeps small chunks separate; the evaluation uses
+            this to measure what merging adds.
 
     Returns:
         Chunks in document order with chunk_index 0, 1, 2, ...
@@ -94,4 +98,4 @@ def chunk_document(document: SourceDocument, split_on_h3: bool = True) -> list[C
                         source_path=document.source_path,
                     )
                 )
-    return chunks
+    return merge_small_chunks(chunks) if merge_small else chunks

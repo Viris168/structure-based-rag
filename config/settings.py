@@ -28,6 +28,11 @@ SUBSECTION_HEADING_LEVEL: int = 3
 HEADING_PATH_SEPARATOR: str = " > "
 # An H2 section longer than this many words is re-split on its H3 headings.
 H3_SPLIT_THRESHOLD: int = 400
+# Chunks smaller than this many tokens are merged into a neighbour from the
+# same `##` section; too little text to rank well on its own.
+MIN_CHUNK_TOKENS: int = 40
+# Joins subsection labels when small chunks are merged.
+SUBSECTION_JOINER: str = " / "
 
 # --- Embedding -----------------------------------------------------------
 # bge-small reads up to 512 tokens (all-MiniLM-L6-v2 stops at 256).
@@ -44,6 +49,12 @@ TOP_K: int = 5
 SEARCH_CANDIDATES: int = 20
 # Standard Reciprocal Rank Fusion constant from the original RRF paper.
 RRF_K: int = 60
+# Cross-encoder that re-scores the fused candidates (reads query + chunk together).
+RERANKER_MODEL: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+# How many fused candidates the reranker re-scores before keeping TOP_K.
+RERANK_CANDIDATES: int = 20
+# The reranker's input limit for query + heading path + chunk.
+RERANKER_MAX_TOKENS: int = 512
 
 # --- Generation ----------------------------------------------------------
 # DeepSeek's API is OpenAI-compatible, so the `openai` SDK talks to it directly.

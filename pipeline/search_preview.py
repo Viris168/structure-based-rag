@@ -11,7 +11,7 @@ def preview_search(query: str) -> str:
         query: A plain-English question about the docs.
 
     Returns:
-        One line per result with its rank, RRF score, and citation label.
+        One line per result with its rank, reranker score, and citation label.
     """
     results = hybrid_search(query)
     if not results:

@@ -1,0 +1,18 @@
+[
+  {
+    "question": "How do I install the SDK?",
+    "source_path": "MCP_Documentation.md",
+    "section_title": "Installation"
+  },
+  {
+    "question": "How do remote servers authenticate clients?",
+    "source_path": "MCP_Documentation.md",
+    "section_title": "Server Setup",
+    "subsection": "Authentication"
+  },
+  {
+    "question": "What does get_or_create_collection do?",
+    "source_path": "DOCUMENTATION.md",
+    "section_title": "Vector Store"
+  }
+]

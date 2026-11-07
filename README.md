@@ -54,7 +54,7 @@ ChromaDB (persistent, chroma_data/)         [Source: doc · Section: heading]
 - **bge-small instead of all-MiniLM-L6-v2.** MiniLM reads only 256 tokens (about 190 words), so the second half of a 400-word chunk would never be embedded. bge-small reads 512.
 - **Heading path in the embedding.** A chunk like "Run `pip install`…" means little on its own; "MCP Documentation > Installation" in front of it tells the model what it is about.
 - **Incremental ingestion.** Each document's hash is stored. Unchanged documents are skipped; changed documents have all their chunks replaced, so no stale chunks remain; deleted documents are removed.
-- **Grounded answers.** The model is told to answer only from the retrieved excerpts, to copy their citation labels, and to reply with a fixed refusal sentence when the excerpts do not contain the answer. If nothing is retrieved, it refuses without calling the model.
+- **Grounded answers.** The model is told to answer only from the retrieved excerpts, to cite them by number ([1], [2]; the code swaps each number for the exact source label, so a citation can never be misspelled), and to reply with a fixed refusal sentence when the excerpts do not contain the answer. If nothing is retrieved, it refuses without calling the model.
 
 ## Setup
 
@@ -83,6 +83,7 @@ The embedding model downloads automatically on first use.
 | `python main.py ask "<question>"` | Answer a question with citations |
 | `python main.py eval` | Score search against `eval/questions.json` |
 | `python main.py compare` | Compare seven search setups on the same questions |
+| `python main.py chat` | Open a chat page at http://127.0.0.1:7860 (stop with Ctrl+C) |
 
 Example:
 
@@ -181,6 +182,8 @@ eval/
   hit_rate.py               hit rate, MRR, and the eval report
   index_builder.py          in-memory indexes with features on or off
   compare.py                the seven-setup comparison
+ui/
+  chat_app.py               browser chat page (Gradio)
 demo/                       one thin script per command
 tests/                      pytest suite and fixtures
 main.py                     command-line entry point

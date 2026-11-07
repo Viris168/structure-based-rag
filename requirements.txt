@@ -4,3 +4,7 @@ sentence-transformers>=3.0
 rank_bm25>=0.2.2
 openai>=1.40
 python-dotenv>=1.0
+gradio>=5
+fastapi>=0.110
+uvicorn>=0.29
+markdown-it-py>=3.0

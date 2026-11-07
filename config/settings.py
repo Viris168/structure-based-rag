@@ -69,6 +69,23 @@ REFUSAL_MESSAGE: str = "I can't answer that from the documentation."
 # Question used by the search and ask demos.
 DEMO_QUESTION: str = "How do I install the project?"
 
+# --- Chat UI -------------------------------------------------------------
+UI_TITLE: str = "Documentation Assistant"
+UI_DESCRIPTION: str = "Ask a question about the docs. Answers come only from the documentation, with sources."
+# 127.0.0.1 keeps the page on this computer; other devices cannot open it.
+UI_HOST: str = "127.0.0.1"
+UI_PORT: int = 7860
+# URL path of the page that shows a full document; sources link here.
+DOC_ROUTE: str = "/doc"
+# Joins section and subsection in a heading's link anchor, e.g. "server-setup--authentication".
+ANCHOR_SEPARATOR: str = "--"
+# Clickable starter questions shown under the chat box.
+UI_EXAMPLES: list[str] = [
+    "How do I install the SDK?",
+    "How do remote servers authenticate clients?",
+    "What should I do if I get HTTP 429?",
+]
+
 # --- Evaluation ----------------------------------------------------------
 # Minimum fraction of eval questions whose expected section must be in the top-k.
 EVAL_HIT_TARGET: float = 0.85

@@ -1,7 +1,7 @@
 """The three steps of the question-answering graph: retrieve, build_prompt, generate."""
 
 from config.settings import REFUSAL_MESSAGE
-from generation.citation import cited_sources
+from generation.citation import cited_sources, expand_citation_numbers
 from generation.llm_client import generate_answer
 from generation.prompt_builder import build_grounded_prompt
 from pipeline.state import GraphState
@@ -33,7 +33,7 @@ def build_prompt_node(state: GraphState) -> GraphState:
 
 
 def generate_node(state: GraphState) -> GraphState:
-    """Ask the LLM, then record which sources its answer cited.
+    """Ask the LLM, turn its numbered citations into labels, and record which sources it cited.
 
     If nothing was retrieved (e.g. the store is empty), refuse without calling
     the LLM, since there is nothing for it to ground an answer in.
@@ -46,5 +46,5 @@ def generate_node(state: GraphState) -> GraphState:
     """
     if not state["chunks"]:
         return {"answer": REFUSAL_MESSAGE, "citations": []}
-    answer = generate_answer(state["messages"])
+    answer = expand_citation_numbers(generate_answer(state["messages"]), state["chunks"])
     return {"answer": answer, "citations": cited_sources(answer, state["chunks"])}

@@ -4,9 +4,11 @@ import pytest
 
 import config.settings as settings
 import generation.llm_client as llm_client
-from generation.citation import cited_sources, format_citation
+from chunking.context_header import build_heading_path
+from generation.citation import cited_sources, expand_citation_numbers, format_citation
 from generation.prompt_builder import build_grounded_prompt
 from retrieval.hybrid_search import hybrid_search
+from retrieval.models import RetrievedChunk
 
 
 def test_citation_format() -> None:
@@ -25,8 +27,10 @@ def test_prompt_is_grounded_and_labelled(ingested: None) -> None:
     system, user = build_grounded_prompt(question, chunks)
     assert system["role"] == "system" and settings.REFUSAL_MESSAGE in system["content"]
     assert user["role"] == "user" and user["content"].endswith(f"Question: {question}")
-    for chunk in chunks:
-        assert format_citation(chunk.metadata) in user["content"]
+    for number, chunk in enumerate(chunks, start=1):
+        m = chunk.metadata
+        heading_path = build_heading_path(str(m["doc_title"]), str(m["section_title"]), str(m["subsection"]))
+        assert f"[{number}] {heading_path}" in user["content"]
     assert "pip install mcp-sdk" in user["content"]
 
 
@@ -49,3 +53,45 @@ def test_missing_api_key_gives_clear_error(monkeypatch: pytest.MonkeyPatch) -> N
             llm_client.generate_answer([{"role": "user", "content": "hi"}])
     finally:
         llm_client._client.cache_clear()
+
+
+# --- numbered citations --------------------------------------------------
+
+def _numbered(*sections: str) -> list[RetrievedChunk]:
+    return [
+        RetrievedChunk(
+            chunk_id=section,
+            text="text",
+            metadata={"doc_title": "Docs", "section_title": section, "subsection": ""},
+            score=0.0,
+        )
+        for section in sections
+    ]
+
+
+CHUNKS = _numbered("Installation", "Rate Limits", "Deployment")
+INSTALL, RATES, DEPLOY = (format_citation(c.metadata) for c in CHUNKS)
+
+
+def test_number_becomes_the_exact_label() -> None:
+    assert expand_citation_numbers("Run pip install [1].", CHUNKS) == f"Run pip install {INSTALL}."
+
+
+@pytest.mark.parametrize("markers", ["[1][3]", "[1, 3]", "[1] [3]", "[1][3][1]"])
+def test_several_numbers_become_several_labels_once_each(markers: str) -> None:
+    assert expand_citation_numbers(f"Both {markers}.", CHUNKS) == f"Both {INSTALL} {DEPLOY}."
+
+
+def test_numbers_that_match_no_excerpt_are_dropped() -> None:
+    assert expand_citation_numbers("Made up [7]. Mixed [2][9].", CHUNKS) == f"Made up . Mixed {RATES}."
+
+
+def test_code_and_indexing_are_left_alone() -> None:
+    answer = "Use `items[1]` [2].\n```python\nfirst = rows[1]\nprint([1])\n```\nThen call f(x)[1] or data[2]."
+    expected = f"Use `items[1]` {RATES}.\n```python\nfirst = rows[1]\nprint([1])\n```\nThen call f(x)[1] or data[2]."
+    assert expand_citation_numbers(answer, CHUNKS) == expected
+
+
+def test_expanded_labels_are_found_as_sources() -> None:
+    answer = expand_citation_numbers("Install [1]. Limits [2]. Install again [1].", CHUNKS)
+    assert cited_sources(answer, CHUNKS) == [INSTALL, RATES]

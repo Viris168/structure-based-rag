@@ -12,15 +12,15 @@ from pipeline.ask import answer_question
 from pipeline.search_preview import preview_search
 from tests.conftest import FakeLLM
 
-INSTALL_ANSWER = "Run `pip install mcp-sdk` [Source: MCP Documentation · Section: Installation]."
+INSTALL_LABEL = "[Source: MCP Documentation · Section: Installation]"
 
 
-def test_answer_lists_cited_sources(ingested: None, fake_llm: FakeLLM) -> None:
-    fake_llm.reply = INSTALL_ANSWER
+def test_numbered_citation_becomes_label_and_source(ingested: None, fake_llm: FakeLLM) -> None:
+    fake_llm.reply = "Run `pip install mcp-sdk` [1]."
     output = answer_question("How do I install the SDK?")
     answer, sources = output.split("Sources:")
-    assert answer.strip() == INSTALL_ANSWER
-    assert "[Source: MCP Documentation · Section: Installation]" in sources
+    assert answer.strip() == f"Run `pip install mcp-sdk` {INSTALL_LABEL}."
+    assert INSTALL_LABEL in sources
 
 
 def test_llm_receives_grounded_prompt(ingested: None, fake_llm: FakeLLM) -> None:

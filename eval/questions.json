@@ -1,0 +1,21 @@
+[
+  {"question": "What problem does this protocol solve for AI assistants?", "source_path": "MCP_Documentation.md", "section_title": "MCP Documentation"},
+  {"question": "Which package do I pip install to get started?", "source_path": "MCP_Documentation.md", "section_title": "Installation"},
+  {"question": "Will this work on Python 3.8?", "source_path": "MCP_Documentation.md", "section_title": "Installation"},
+  {"question": "How does a client talk to a server running as a local process on the same machine?", "source_path": "MCP_Documentation.md", "section_title": "Server Setup", "subsection": "Transports"},
+  {"question": "Can a server be reached over the network, and over what protocol?", "source_path": "MCP_Documentation.md", "section_title": "Server Setup", "subsection": "Transports"},
+  {"question": "What kind of credentials do clients present to a hosted server?", "source_path": "MCP_Documentation.md", "section_title": "Server Setup", "subsection": "Authentication"},
+  {"question": "Which environment variable holds the access token?", "source_path": "MCP_Documentation.md", "section_title": "Server Setup", "subsection": "Authentication"},
+  {"question": "How do I expose a Python function so the assistant can call it?", "source_path": "MCP_Documentation.md", "section_title": "Server Setup", "subsection": "Tool Registration"},
+  {"question": "What fields does every tool have to define?", "source_path": "MCP_Documentation.md", "section_title": "Server Setup", "subsection": "Tool Registration"},
+  {"question": "My client says 'Method not found'. What is wrong?", "source_path": "MCP_Documentation.md", "section_title": "Troubleshooting"},
+  {"question": "The server rejects a call even though I think the tool exists. What should I check?", "source_path": "MCP_Documentation.md", "section_title": "Troubleshooting"},
+  {"question": "Which database stores the chunks?", "source_path": "DOCUMENTATION.md", "section_title": "Vector Store"},
+  {"question": "How do I open the database without deleting what is already stored?", "source_path": "DOCUMENTATION.md", "section_title": "Vector Store"},
+  {"question": "How fast can I call the API before I get throttled?", "source_path": "DOCUMENTATION.md", "section_title": "Rate Limits"},
+  {"question": "I keep getting 'too many requests' errors. What should my client do?", "source_path": "DOCUMENTATION.md", "section_title": "Rate Limits"},
+  {"question": "Is the request limit per user or per key?", "source_path": "DOCUMENTATION.md", "section_title": "Rate Limits"},
+  {"question": "How do I build the container image?", "source_path": "DOCUMENTATION.md", "section_title": "Deployment"},
+  {"question": "Which port does the container listen on?", "source_path": "DOCUMENTATION.md", "section_title": "Deployment"},
+  {"question": "How do I run the assistant in a container?", "source_path": "DOCUMENTATION.md", "section_title": "Deployment"}
+]
